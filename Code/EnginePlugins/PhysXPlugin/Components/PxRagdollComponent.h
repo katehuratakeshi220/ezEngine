@@ -35,7 +35,6 @@ struct ezPxRagdollStart
   {
     BindPose,
     WaitForPose,
-    WaitForPoseAndVelocity, // TODO: not implemented (no difference to WaitForPose)
     Wait,
     Default = BindPose
   };
@@ -131,7 +130,6 @@ protected:
   void CreateConstraints();
 
   bool m_bShapesCreated = false;
-  bool m_bHasFirstState = false;
   bool m_bDisableGravity = false;
   ezUInt32 m_uiShapeID = ezInvalidIndex;
   ezUInt32 m_uiUserDataIndex = ezInvalidIndex;

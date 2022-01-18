@@ -2,6 +2,7 @@
 
 #include <Core/WorldSerializer/WorldReader.h>
 #include <Core/WorldSerializer/WorldWriter.h>
+#include <Foundation/Configuration/CVar.h>
 #include <PhysXPlugin/Components/PxRagdollComponent.h>
 #include <PhysXPlugin/Utilities/PxConversionUtils.h>
 #include <PhysXPlugin/Utilities/PxUserData.h>
@@ -15,8 +16,7 @@
 using namespace physx;
 
 /* TODO
-* angular momentum preservation
-* force application
+* max force clamping ?
 * mass distribution
 * communication with anim controller
 * drive to pose
@@ -25,7 +25,7 @@ using namespace physx;
 
 // clang-format off
 EZ_BEGIN_STATIC_REFLECTED_ENUM(ezPxRagdollStart, 1)
-  EZ_ENUM_CONSTANTS(ezPxRagdollStart::BindPose, ezPxRagdollStart::WaitForPose, ezPxRagdollStart::WaitForPoseAndVelocity, ezPxRagdollStart::Wait)
+  EZ_ENUM_CONSTANTS(ezPxRagdollStart::BindPose, ezPxRagdollStart::WaitForPose, ezPxRagdollStart::Wait)
 EZ_END_STATIC_REFLECTED_ENUM;
 
 EZ_BEGIN_DYNAMIC_REFLECTED_TYPE(ezPxRagdollConstraint, 1, ezRTTIDefaultAllocator<ezPxRagdollConstraint>)
@@ -175,23 +175,6 @@ void ezPxRagdollComponent::OnAnimationPoseUpdated(ezMsgAnimationPoseUpdated& pos
       return;
 
     m_hSkeleton = msg.m_hSkeleton;
-  }
-
-  if (m_bHasFirstState == false && m_Start == ezPxRagdollStart::WaitForPoseAndVelocity)
-  {
-    m_bHasFirstState = true;
-
-    // TODO: positions are not enough since bones don't really change their position, but mostly their angular momentum
-    // -> probably need to store bone rotations and compute the angular change instead
-
-    //m_vLastPos.SetCountUninitialized(poseMsg.m_ModelTransforms.GetCount());
-
-    //for (ezUInt32 i = 0; i < poseMsg.m_ModelTransforms.GetCount(); ++i)
-    //{
-    //  m_vLastPos[i] = poseMsg.m_ModelTransforms[i].GetTranslationVector();
-    //}
-
-    return;
   }
 
   CreatePhysicsShapes(m_hSkeleton, poseMsg);
@@ -599,8 +582,8 @@ void ezPxRagdollComponent::CreateBoneLink(ezUInt16 uiBoneIdx, const ezSkeletonJo
   m_ArticulationLinks[uiBoneIdx].m_sBoneName = joint.GetName();
   m_ArticulationLinks[uiBoneIdx].m_pLink = thisLink.m_pLink;
   thisLink.m_pLink->setActorFlag(PxActorFlag::eDISABLE_GRAVITY, m_bDisableGravity);
-  thisLink.m_pLink->setLinearVelocity(ezPxConversionUtils::ToVec3(GetOwner()->GetVelocity()));
-  //thisLink.m_pLink->setAngularVelocity(ezPxConversionUtils::ToVec3(GetOwner()->GetVelocity())); // TODO
+  thisLink.m_pLink->setLinearVelocity(ezPxConversionUtils::ToVec3(GetOwner()->GetVelocity()), false);
+
   thisLink.m_pLink->userData = pPxUserData;
 
   if (parentLink.m_pLink == nullptr)
