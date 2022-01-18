@@ -99,11 +99,7 @@ public:
   bool GetDisableGravity() const { return m_bDisableGravity; } // [ property ]
   void SetDisableGravity(bool b);                              // [ property ]
 
-  void SetSurfaceFile(const char* szFile); // [ property ]
-  const char* GetSurfaceFile() const;      // [ property ]
-
-  ezUInt8 m_uiCollisionLayer = 0; // [ property ]
-  bool m_bSelfCollision = false;  // [ property ]
+  bool m_bSelfCollision = false; // [ property ]
 
   void AddImpulseAtPos(ezMsgPhysicsAddImpulse& msg); // [ message ]
   void AddForceAtPos(ezMsgPhysicsAddForce& msg);     // [ message ]
@@ -127,14 +123,9 @@ protected:
   void Update();
   void CreateShapesFromBindPose();
   void AddArticulationToScene();
-  void CreateBoneShape(const ezTransform& rootTransform, ezBasisAxis::Enum srcBoneDir, physx::PxRigidActor& actor, const ezSkeletonResourceGeometry& geo, const physx::PxMaterial& pxMaterial, const physx::PxFilterData& pxFilterData, ezPxUserData* pPxUserData);
+  void CreateBoneShape(const ezTransform& rootTransform, ezBasisAxis::Enum srcBoneDir, physx::PxRigidActor& actor, const ezSkeletonResourceGeometry& geo, ezPxUserData* pPxUserData);
   void CreateBoneLink(ezUInt16 uiBoneIdx, const ezSkeletonJoint& bone, ezBasisAxis::Enum srcBoneDir, ezPxUserData* pPxUserData, LinkData& thisLink, const LinkData& parentLink, ezMsgAnimationPoseUpdated& poseMsg);
   void CreateConstraints();
-
-  physx::PxMaterial* GetPxMaterial();
-  physx::PxFilterData CreateFilterData();
-
-  ezSurfaceResourceHandle m_hSurface;
 
   bool m_bShapesCreated = false;
   bool m_bHasFirstState = false;

@@ -16,7 +16,6 @@ using namespace physx;
 
 /* TODO
 * angular momentum preservation
-* materials
 * force application
 * mass distribution
 * communication with anim controller
@@ -45,13 +44,11 @@ EZ_BEGIN_DYNAMIC_REFLECTED_TYPE(ezPxRagdollConstraint, 1, ezRTTIDefaultAllocator
 }
 EZ_END_DYNAMIC_REFLECTED_TYPE;
 
-EZ_BEGIN_COMPONENT_TYPE(ezPxRagdollComponent, 1, ezComponentMode::Dynamic)
+EZ_BEGIN_COMPONENT_TYPE(ezPxRagdollComponent, 2, ezComponentMode::Dynamic)
 {
   EZ_BEGIN_PROPERTIES
   {
     EZ_ENUM_MEMBER_PROPERTY("Start", ezPxRagdollStart, m_Start),
-    EZ_ACCESSOR_PROPERTY("Surface", GetSurfaceFile, SetSurfaceFile)->AddAttributes(new ezAssetBrowserAttribute("Surface")),
-    EZ_MEMBER_PROPERTY("CollisionLayer", m_uiCollisionLayer)->AddAttributes(new ezDynamicEnumAttribute("PhysicsCollisionLayer")),
     EZ_ACCESSOR_PROPERTY("DisableGravity", GetDisableGravity, SetDisableGravity),
     EZ_MEMBER_PROPERTY("SelfCollision", m_bSelfCollision),
     EZ_ARRAY_MEMBER_PROPERTY("Constraints", m_Constraints),
@@ -83,9 +80,7 @@ void ezPxRagdollComponent::SerializeComponent(ezWorldWriter& stream) const
 
   s << m_Start;
   s << m_bDisableGravity;
-  s << m_uiCollisionLayer;
   s << m_bSelfCollision;
-  s << m_hSurface;
   // TODO m_Constraints
 }
 
@@ -97,49 +92,8 @@ void ezPxRagdollComponent::DeserializeComponent(ezWorldReader& stream)
 
   s >> m_Start;
   s >> m_bDisableGravity;
-  s >> m_uiCollisionLayer;
   s >> m_bSelfCollision;
-  s >> m_hSurface;
   // TODO m_Constraints
-}
-
-void ezPxRagdollComponent::SetSurfaceFile(const char* szFile)
-{
-  if (!ezStringUtils::IsNullOrEmpty(szFile))
-  {
-    m_hSurface = ezResourceManager::LoadResource<ezSurfaceResource>(szFile);
-  }
-
-  if (m_hSurface.IsValid())
-    ezResourceManager::PreloadResource(m_hSurface);
-}
-
-const char* ezPxRagdollComponent::GetSurfaceFile() const
-{
-  if (!m_hSurface.IsValid())
-    return "";
-
-  return m_hSurface.GetResourceID();
-}
-
-PxMaterial* ezPxRagdollComponent::GetPxMaterial()
-{
-  if (m_hSurface.IsValid())
-  {
-    ezResourceLock<ezSurfaceResource> pSurface(m_hSurface, ezResourceAcquireMode::BlockTillLoaded);
-
-    if (pSurface->m_pPhysicsMaterial != nullptr)
-    {
-      return static_cast<PxMaterial*>(pSurface->m_pPhysicsMaterial);
-    }
-  }
-
-  return ezPhysX::GetSingleton()->GetDefaultMaterial();
-}
-
-PxFilterData ezPxRagdollComponent::CreateFilterData()
-{
-  return ezPhysX::CreateFilterData(m_uiCollisionLayer, m_uiShapeID);
 }
 
 void ezPxRagdollComponent::OnSimulationStarted()
@@ -249,11 +203,8 @@ void ezPxRagdollComponent::CreatePhysicsShapes(const ezSkeletonResourceHandle& h
     ezPhysXWorldModule* pPhysModule = GetWorld()->GetOrCreateModule<ezPhysXWorldModule>();
     m_uiShapeID = pPhysModule->CreateShapeId();
     m_uiUserDataIndex = pPhysModule->AllocateUserData(pPxUserData);
+    pPxUserData->Init(this);
   }
-
-  pPxUserData->Init(this);
-  const PxMaterial& pxMaterial = *GetPxMaterial();
-  const PxFilterData pxFilter = CreateFilterData();
 
   m_pArticulation = ezPhysX::GetSingleton()->GetPhysXAPI()->createArticulation();
   m_pArticulation->userData = pPxUserData;
@@ -286,7 +237,7 @@ void ezPxRagdollComponent::CreatePhysicsShapes(const ezSkeletonResourceHandle& h
       CreateBoneLink(geo.m_uiAttachedToJoint, joint, srcBoneDir, pPxUserData, thisLink, parentLink, poseMsg);
     }
 
-    CreateBoneShape(*poseMsg.m_pRootTransform, srcBoneDir, *thisLink.m_pLink, geo, pxMaterial, pxFilter, pPxUserData);
+    CreateBoneShape(*poseMsg.m_pRootTransform, srcBoneDir, *thisLink.m_pLink, geo, pPxUserData);
 
     // TODO mass distribution
     {
@@ -472,7 +423,8 @@ void ezPxRagdollComponent::CreateShapesFromBindPose()
 
   m_JointPoses.SetCountUninitialized(desc.m_Skeleton.GetJointCount());
 
-  auto getBone = [&](ezUInt32 i, auto f) -> ezMat4 {
+  auto getBone = [&](ezUInt32 i, auto f) -> ezMat4
+  {
     const auto& j = desc.m_Skeleton.GetJointByIndex(i);
     const ezMat4 bm = j.GetBindPoseLocalTransform().GetAsMat4();
 
@@ -524,8 +476,23 @@ void ezPxRagdollComponent::AddArticulationToScene()
   }
 }
 
-void ezPxRagdollComponent::CreateBoneShape(const ezTransform& rootTransform, ezBasisAxis::Enum srcBoneDir, physx::PxRigidActor& actor, const ezSkeletonResourceGeometry& geo, const PxMaterial& pxMaterial, const PxFilterData& pxFilterData, ezPxUserData* pPxUserData)
+void ezPxRagdollComponent::CreateBoneShape(const ezTransform& rootTransform, ezBasisAxis::Enum srcBoneDir, physx::PxRigidActor& actor, const ezSkeletonResourceGeometry& geo, ezPxUserData* pPxUserData)
 {
+  PxFilterData pxFilterData = ezPhysX::CreateFilterData(geo.m_uiCollisionLayer, m_uiShapeID);
+
+  physx::PxMaterial* pxMaterial = nullptr;
+  if (geo.m_hSurface.IsValid())
+  {
+    ezResourceLock<ezSurfaceResource> pSurface(geo.m_hSurface, ezResourceAcquireMode::BlockTillLoaded);
+
+    if (pSurface->m_pPhysicsMaterial != nullptr)
+    {
+      pxMaterial = static_cast<physx::PxMaterial*>(pSurface->m_pPhysicsMaterial);
+    }
+  }
+  else
+    pxMaterial = ezPhysX::GetSingleton()->GetDefaultMaterial();
+
   PxShape* pShape = nullptr;
 
   const ezQuat qBoneDirAdjustment = ezBasisAxis::GetBasisRotation(ezBasisAxis::PositiveX, srcBoneDir);
@@ -540,7 +507,7 @@ void ezPxRagdollComponent::CreateBoneShape(const ezTransform& rootTransform, ezB
   if (geo.m_Type == ezSkeletonJointGeometryType::Sphere)
   {
     PxSphereGeometry shape(geo.m_Transform.m_vScale.z);
-    pShape = PxRigidActorExt::createExclusiveShape(actor, shape, pxMaterial);
+    pShape = PxRigidActorExt::createExclusiveShape(actor, shape, *pxMaterial);
   }
   else if (geo.m_Type == ezSkeletonJointGeometryType::Box)
   {
@@ -553,12 +520,12 @@ void ezPxRagdollComponent::CreateBoneShape(const ezTransform& rootTransform, ezB
     st.m_vPosition += qFinalBoneRot * ezVec3(geo.m_Transform.m_vScale.x * 0.5f, 0, 0);
 
     PxBoxGeometry shape(ext.x, ext.y, ext.z);
-    pShape = PxRigidActorExt::createExclusiveShape(actor, shape, pxMaterial);
+    pShape = PxRigidActorExt::createExclusiveShape(actor, shape, *pxMaterial);
   }
   else if (geo.m_Type == ezSkeletonJointGeometryType::Capsule)
   {
     PxCapsuleGeometry shape(geo.m_Transform.m_vScale.z, geo.m_Transform.m_vScale.x * 0.5f);
-    pShape = PxRigidActorExt::createExclusiveShape(actor, shape, pxMaterial);
+    pShape = PxRigidActorExt::createExclusiveShape(actor, shape, *pxMaterial);
 
     // TODO: if offset desired
     st.m_vPosition += qFinalBoneRot * ezVec3(geo.m_Transform.m_vScale.x * 0.5f, 0, 0);
