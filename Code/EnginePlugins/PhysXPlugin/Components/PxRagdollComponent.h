@@ -138,11 +138,12 @@ protected:
 
   struct Impulse
   {
-    ezVec3 m_vPos;
-    ezVec3 m_vImpulse;
+    ezVec3 m_vPos = ezVec3::ZeroVector();
+    ezVec3 m_vImpulse = ezVec3::ZeroVector();
+    physx::PxArticulationLink* m_pTargetLink = nullptr;
   };
 
-  ezHybridArray<Impulse, 8> m_Impulses;
+  Impulse m_NextImpulse;
   ezDynamicArray<ezPxRagdollConstraint> m_Constraints;
 
   ezEnum<ezPxRagdollStart> m_Start;

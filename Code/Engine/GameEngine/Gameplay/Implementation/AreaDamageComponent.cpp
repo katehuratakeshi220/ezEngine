@@ -72,10 +72,12 @@ void ezAreaDamageComponent::ApplyAreaDamage()
 
         if (fDistance >= 0.01f)
         {
+          // if the direction is valid (non-zero), just normalize it
           vDirToTarget /= fDistance;
         }
         else
         {
+          // otherwise, if we are so close, that the distance is zero, pick a random direction away from it
           vDirToTarget.CreateRandomDirection(GetWorld()->GetRandomNumberGenerator());
         }
 
@@ -98,6 +100,8 @@ void ezAreaDamageComponent::ApplyAreaDamage()
         {
           ezMsgDamage msg;
           msg.m_fDamage = static_cast<double>(m_fDamage) * static_cast<double>(fScale);
+          msg.m_vImpactDirection = vDirToTarget;
+          msg.m_vGlobalPosition = vOwnPosition + vDistToTarget * 0.9f; // rough guess for a position where to apply the damage
 
           ezGameObject* pShape = nullptr;
           if (GetWorld()->TryGetObject(hit.m_hShapeObject, pShape))

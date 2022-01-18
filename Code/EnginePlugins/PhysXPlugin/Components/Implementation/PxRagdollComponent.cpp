@@ -354,13 +354,11 @@ void ezPxRagdollComponent::UpdatePose()
   const ezTransform newRootTransform = ezPxConversionUtils::ToTransform(m_pRootLink->getGlobalPose());
   GetOwner()->SetGlobalTransform(newRootTransform * m_RootLinkLocalTransform.GetInverse());
 
-  ezMat4 mInv = invRootTransform * m_RootLinkLocalTransform.GetAsMat4() * newRootTransform.GetInverse().GetAsMat4();
+  const ezMat4 mInv = invRootTransform * m_RootLinkLocalTransform.GetAsMat4() * newRootTransform.GetInverse().GetAsMat4();
 
-  // the PhysX bones' main direction is +X, we have to map this back to the original source bone direction
-  ezQuat qBoneDirAdjustment = ezBasisAxis::GetBasisRotation(ezBasisAxis::PositiveX, desc.m_Skeleton.m_BoneDirection);
-  qBoneDirAdjustment.SetIdentity(); // TODO: should not be needed anymore
-
+#if JOINT_DEBUG_DRAW
   ezHybridArray<ezDebugRenderer::Line, 32> lines;
+#endif
 
   for (ezUInt32 i = 0; i < m_ArticulationLinks.GetCount(); ++i)
   {
@@ -373,11 +371,11 @@ void ezPxRagdollComponent::UpdatePose()
       const ezTransform linkGlobalPose = ezPxConversionUtils::ToTransform(m_ArticulationLinks[i].m_pLink->getGlobalPose());
 
       ezTransform pose = linkGlobalPose;
-      pose.m_qRotation = pose.m_qRotation * qBoneDirAdjustment;
+      pose.m_qRotation = pose.m_qRotation;
 
       m_JointPoses[i] = mInv * pose.GetAsMat4() * scale;
 
-#if 0
+#if JOINT_DEBUG_DRAW
       if (auto joint = m_ArticulationLinks[i]->getInboundJoint())
       {
         // joint in parent frame
@@ -426,16 +424,34 @@ void ezPxRagdollComponent::UpdatePose()
     }
   }
 
+#if JOINT_DEBUG_DRAW
   ezDebugRenderer::DrawLines(GetWorld(), lines, ezColor::White);
+#endif
 
   GetOwner()->SendMessage(poseMsg);
 }
 
 void ezPxRagdollComponent::Update()
 {
-  if (m_bShapesCreated)
+  if (!m_bShapesCreated)
+    return;
+
+  UpdatePose();
+
+  if (!m_NextImpulse.m_vImpulse.IsZero())
   {
-    UpdatePose();
+    ezPhysXWorldModule* pModule = GetWorld()->GetOrCreateModule<ezPhysXWorldModule>();
+    EZ_PX_WRITE_LOCK(*pModule->GetPxScene());
+
+    if (m_NextImpulse.m_pTargetLink == nullptr)
+    {
+      m_NextImpulse.m_pTargetLink = m_pRootLink;
+    }
+
+    PxRigidBodyExt::addForceAtPos(*m_NextImpulse.m_pTargetLink, ezPxConversionUtils::ToVec3(m_NextImpulse.m_vImpulse), ezPxConversionUtils::ToVec3(m_NextImpulse.m_vPos), PxForceMode::eIMPULSE);
+
+    m_NextImpulse.m_pTargetLink = nullptr;
+    m_NextImpulse.m_vImpulse.SetZero();
   }
 }
 
@@ -497,19 +513,6 @@ void ezPxRagdollComponent::AddArticulationToScene()
   m_pAggregate = pPhysApi->createAggregate(64, m_bSelfCollision);
   m_pAggregate->addArticulation(*m_pArticulation);
   pPhysModule->GetPxScene()->addAggregate(*m_pAggregate);
-
-  {
-    PxArticulationLink* pLink[1] = {};
-    m_pArticulation->getLinks(pLink, 1);
-
-    for (const auto& imp : m_Impulses)
-    {
-      PxRigidBodyExt::addForceAtPos(*pLink[0], ezPxConversionUtils::ToVec3(imp.m_vImpulse), ezPxConversionUtils::ToVec3(imp.m_vPos), PxForceMode::eIMPULSE);
-      //pLink[0]->addForce(ezPxConversionUtils::ToVec3(imp.m_vImpulse), PxForceMode::eIMPULSE);
-    }
-
-    m_Impulses.Clear();
-  }
 }
 
 void ezPxRagdollComponent::CreateBoneShape(const ezTransform& rootTransform, ezBasisAxis::Enum srcBoneDir, physx::PxRigidActor& actor, const ezSkeletonResourceGeometry& geo, ezPxUserData* pPxUserData)
@@ -713,26 +716,18 @@ void ezPxRagdollComponent::AddForceAtPos(ezMsgPhysicsAddForce& msg)
 
 void ezPxRagdollComponent::AddImpulseAtPos(ezMsgPhysicsAddImpulse& msg)
 {
-  if (!m_bShapesCreated)
+  EZ_ASSERT_DEV(!msg.m_vImpulse.IsNaN() && !msg.m_vGlobalPosition.IsNaN(), "ezMsgPhysicsAddImpulse contains invalid (NaN) impulse or position");
+
+  if (msg.m_vImpulse.GetLengthSquared() > m_NextImpulse.m_vImpulse.GetLengthSquared())
   {
-    auto& imp = m_Impulses.ExpandAndGetRef();
-    imp.m_vPos = msg.m_vGlobalPosition;
-    imp.m_vImpulse = msg.m_vImpulse;
-    return;
-  }
+    m_NextImpulse.m_vPos = msg.m_vGlobalPosition;
+    m_NextImpulse.m_vImpulse = msg.m_vImpulse;
+    m_NextImpulse.m_pTargetLink = static_cast<PxArticulationLink*>(msg.m_pInternalPhysicsActor);
 
-  if (m_pArticulation != nullptr)
-  {
-    EZ_PX_WRITE_LOCK(*m_pArticulation->getScene());
-
-    PxArticulationLink* pLink[1] = {};
-
-    if (msg.m_pInternalPhysicsActor != nullptr)
-      pLink[0] = reinterpret_cast<PxArticulationLink*>(msg.m_pInternalPhysicsActor);
-    else
-      m_pArticulation->getLinks(pLink, 1);
-
-    PxRigidBodyExt::addForceAtPos(*pLink[0], ezPxConversionUtils::ToVec3(msg.m_vImpulse), ezPxConversionUtils::ToVec3(msg.m_vGlobalPosition), PxForceMode::eIMPULSE);
+    if (m_NextImpulse.m_pTargetLink)
+    {
+      EZ_ASSERT_DEBUG(ezStringUtils::IsEqual(m_NextImpulse.m_pTargetLink->getConcreteTypeName(), "PxArticulationLink"), "Expected PxArticulationLink, got {}", m_NextImpulse.m_pTargetLink->getConcreteTypeName());
+    }
   }
 }
 
