@@ -11,7 +11,7 @@ o
 		s %AssetType{"Scene"}
 		VarArray %Dependencies{}
 		Uuid %DocumentID{u4{17626430219778045362,5283987167320039176}}
-		u4 %Hash{12958437115357399431}
+		u4 %Hash{16281883916680605298}
 		VarArray %MetaInfo{}
 		VarArray %Outputs{}
 		VarArray %References
@@ -23,7 +23,6 @@ o
 			s{"{ 4bdbade7-50be-4988-9d16-196164a5dbfb }"}
 			s{"{ 6240a925-6584-48c5-8559-6981f5d9bedd }"}
 			s{"{ 69ce5162-8938-4fcf-af58-4b590317f807 }"}
-			s{"{ 735b3f11-bd0e-44d0-af14-ccc2448f6a9c }"}
 			s{"{ 8044a36f-e313-4204-973d-796231798973 }"}
 			s{"{ 877d18b7-eb46-42d9-a9d6-836ef76c0fd9 }"}
 			s{"{ 94c7f641-1c6b-43c0-bebb-4d1796f8f4c8 }"}
@@ -877,8 +876,8 @@ o
 	u3 %v{1}
 	p
 	{
-		b %Active{0}
-		s %AnimationClip{"{ 735b3f11-bd0e-44d0-af14-ccc2448f6a9c }"}
+		b %Active{1}
+		s %AnimationClip{"{ 363d0e0f-3f2d-489c-9691-9d0df031d7a8 }"}
 		s %AnimationMode{"ezPropertyAnimMode::Loop"}
 		s %RootMotionMode{"ezRootMotionMode::Ignore"}
 		f %Speed{0x0000803F}
@@ -1112,7 +1111,7 @@ o
 	u3 %v{4}
 	p
 	{
-		b %Active{1}
+		b %Active{0}
 		s %BonesToHighlight{""}
 		s %Skeleton{"{ 94c7f641-1c6b-43c0-bebb-4d1796f8f4c8 }"}
 		b %VisualizeColliders{1}

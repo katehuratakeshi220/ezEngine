@@ -10,6 +10,7 @@ struct ezMsgPhysicsAddForce;
 struct ezSkeletonResourceGeometry;
 class ezPxUserData;
 class ezSkeletonJoint;
+struct ezMsgAnimationPoseProposal;
 
 namespace physx
 {
@@ -94,7 +95,8 @@ public:
 
   ezUInt32 GetShapeId() const { return m_uiShapeID; } // [ scriptable ]
 
-  void OnAnimationPoseUpdated(ezMsgAnimationPoseUpdated& msg); // [ msg handler ]
+  void OnAnimationPoseProposal(ezMsgAnimationPoseProposal& msg); // [ msg handler ]
+  void OnAnimationPoseUpdated(ezMsgAnimationPoseUpdated& msg);   // [ msg handler ]
 
   bool GetDisableGravity() const { return m_bDisableGravity; } // [ property ]
   void SetDisableGravity(bool b);                              // [ property ]
@@ -115,6 +117,7 @@ protected:
   {
     physx::PxArticulationLink* m_pLink = nullptr;
     ezHashedString m_sBoneName;
+    ezQuat m_qJointOffset;
   };
 
   void CreatePhysicsShapes(const ezSkeletonResourceHandle& hSkeleton, ezMsgAnimationPoseUpdated& poseMsg);

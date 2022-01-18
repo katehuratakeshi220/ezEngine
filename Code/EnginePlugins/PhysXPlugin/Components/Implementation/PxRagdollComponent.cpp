@@ -57,6 +57,7 @@ EZ_BEGIN_COMPONENT_TYPE(ezPxRagdollComponent, 2, ezComponentMode::Dynamic)
   EZ_BEGIN_MESSAGEHANDLERS
   {
     EZ_MESSAGE_HANDLER(ezMsgAnimationPoseUpdated, OnAnimationPoseUpdated),
+    EZ_MESSAGE_HANDLER(ezMsgAnimationPoseProposal, OnAnimationPoseProposal),
     EZ_MESSAGE_HANDLER(ezMsgPhysicsAddForce, AddForceAtPos),
     EZ_MESSAGE_HANDLER(ezMsgPhysicsAddImpulse, AddImpulseAtPos),
   }
@@ -111,6 +112,41 @@ void ezPxRagdollComponent::OnDeactivated()
   DestroyPhysicsShapes();
 
   SUPER::OnDeactivated();
+}
+
+
+void ezPxRagdollComponent::OnAnimationPoseProposal(ezMsgAnimationPoseProposal& msg)
+{
+  if (!m_bShapesCreated)
+    return;
+
+  msg.m_bContinueAnimating = false;
+
+  ezPhysXWorldModule* pModule = GetWorld()->GetOrCreateModule<ezPhysXWorldModule>();
+  EZ_PX_WRITE_LOCK(*pModule->GetPxScene());
+
+  for (ezUInt32 i = 0; i < m_ArticulationLinks.GetCount(); ++i)
+  {
+    if (m_ArticulationLinks[i].m_pLink == nullptr)
+    {
+      // no need to do anything, just pass the original pose through
+    }
+    else
+    {
+      if (PxArticulationJoint* pJoint = (PxArticulationJoint*)m_ArticulationLinks[i].m_pLink->getInboundJoint())
+      {
+        ezQuat rot;
+        rot.SetFromMat3(msg.m_ModelTransforms[i].GetRotationalPart());
+
+        rot = m_ArticulationLinks[i].m_qJointOffset * rot;
+
+        pJoint->setDriveType(PxArticulationJointDriveType::eTARGET);
+        pJoint->setTargetOrientation(ezPxConversionUtils::ToQuat(rot));
+        pJoint->setStiffness(100);
+        //pJoint->setTargetVelocity(PxVec3(1, 1, 1));
+      }
+    }
+  }
 }
 
 void ezPxRagdollComponent::OnAnimationPoseUpdated(ezMsgAnimationPoseUpdated& poseMsg)
@@ -584,6 +620,8 @@ void ezPxRagdollComponent::CreateBoneLink(ezUInt16 uiBoneIdx, const ezSkeletonJo
     ezTransform parentFrameJoint;
     parentFrameJoint.SetLocalTransform(parentLink.m_GlobalTransform, thisLink.m_GlobalTransform);
     parentFrameJoint.m_qRotation = joint.GetLocalOrientation() * qBoneDirAdjustment;
+
+    m_ArticulationLinks[uiBoneIdx].m_qJointOffset = -parentLink.m_GlobalTransform.m_qRotation * parentFrameJoint.m_qRotation;
 
     ezTransform childFrameJoint;
     childFrameJoint.SetIdentity();
