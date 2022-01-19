@@ -315,8 +315,8 @@ void ezPxRagdollComponent::UpdatePose()
   EZ_PX_READ_LOCK(*pModule->GetPxScene());
 
   // TODO: enable again
-  //if (m_pArticulation->isSleeping())
-  //return;
+  if (m_pArticulation->isSleeping())
+    return;
 
   ezResourceLock<ezSkeletonResource> pSkeleton(m_hSkeleton, ezResourceAcquireMode::BlockTillLoaded);
   const auto& desc = pSkeleton->GetDescriptor();
