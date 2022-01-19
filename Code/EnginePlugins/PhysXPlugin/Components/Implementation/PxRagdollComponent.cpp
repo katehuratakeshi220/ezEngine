@@ -139,6 +139,7 @@ void ezPxRagdollComponent::OnAnimationPoseProposal(ezMsgAnimationPoseProposal& m
         rot.SetFromMat3(msg.m_ModelTransforms[i].GetRotationalPart());
 
         rot = m_ArticulationLinks[i].m_qJointOffset * rot;
+        rot.SetIdentity();
 
         pJoint->setDriveType(PxArticulationJointDriveType::eTARGET);
         pJoint->setTargetOrientation(ezPxConversionUtils::ToQuat(rot));
@@ -314,7 +315,6 @@ void ezPxRagdollComponent::UpdatePose()
   ezPhysXWorldModule* pModule = GetWorld()->GetOrCreateModule<ezPhysXWorldModule>();
   EZ_PX_READ_LOCK(*pModule->GetPxScene());
 
-  // TODO: enable again
   if (m_pArticulation->isSleeping())
     return;
 
@@ -428,7 +428,23 @@ void ezPxRagdollComponent::Update()
 
     if (m_NextImpulse.m_pTargetLink == nullptr)
     {
+      float fBestDist = ezMath::HighValue<float>();
       m_NextImpulse.m_pTargetLink = m_pRootLink;
+
+      // search for the best link to apply the impulse to
+      for (const auto& link : m_ArticulationLinks)
+      {
+        if (link.m_pLink == nullptr)
+          continue;
+
+        const float fDistSqr = (ezPxConversionUtils::ToVec3(link.m_pLink->getGlobalPose().p) - m_NextImpulse.m_vPos).GetLengthSquared();
+
+        if (fDistSqr < fBestDist)
+        {
+          fBestDist = fDistSqr;
+          m_NextImpulse.m_pTargetLink = link.m_pLink;
+        }
+      }
     }
 
     PxRigidBodyExt::addForceAtPos(*m_NextImpulse.m_pTargetLink, ezPxConversionUtils::ToVec3(m_NextImpulse.m_vImpulse), ezPxConversionUtils::ToVec3(m_NextImpulse.m_vPos), PxForceMode::eIMPULSE);

@@ -11,7 +11,7 @@ o
 		s %AssetType{"Scene"}
 		VarArray %Dependencies{}
 		Uuid %DocumentID{u4{17626430219778045362,5283987167320039176}}
-		u4 %Hash{12467590631638290000}
+		u4 %Hash{12531689744346773131}
 		VarArray %MetaInfo{}
 		VarArray %Outputs{}
 		VarArray %References
@@ -1103,13 +1103,28 @@ o
 }
 o
 {
+	Uuid %id{u4{9004298410014966697,5365895183949848865}}
+	s %t{"ezPxRagdollConstraint"}
+	u3 %v{1}
+	p
+	{
+		s %Bone{"Foot.R"}
+		Vec3 %Position{f{0x077C8A3D,0x215AE73D,0x30D9A934}}
+	}
+}
+o
+{
 	Uuid %id{u4{15183730806130760066,5391316523672606901}}
 	s %t{"ezPxRagdollComponent"}
 	u3 %v{2}
 	p
 	{
 		b %Active{1}
-		VarArray %Constraints{}
+		VarArray %Constraints
+		{
+			Uuid{u4{14783504906692145831,5721870912602391009}}
+			Uuid{u4{9004298410014966697,5365895183949848865}}
+		}
 		b %DisableGravity{1}
 		b %SelfCollision{0}
 		s %Start{"ezPxRagdollStart::BindPose"}
@@ -1350,6 +1365,17 @@ o
 		{
 			s{"CastShadow"}
 		}
+	}
+}
+o
+{
+	Uuid %id{u4{14783504906692145831,5721870912602391009}}
+	s %t{"ezPxRagdollConstraint"}
+	u3 %v{1}
+	p
+	{
+		s %Bone{"Foot.L"}
+		Vec3 %Position{f{0xB601AB3C,0xBF3B2ABE,0xE0DB7AB4}}
 	}
 }
 o
