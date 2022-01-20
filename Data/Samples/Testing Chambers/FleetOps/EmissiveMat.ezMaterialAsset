@@ -18,7 +18,7 @@ o
 			s{":app/VisualShader/Textures.ddl"}
 		}
 		Uuid %DocumentID{u4{15903596662049351313,5036358118506951106}}
-		u4 %Hash{3254109762824256517}
+		u4 %Hash{11190483156569651305}
 		VarArray %MetaInfo{}
 		VarArray %Outputs
 		{
@@ -26,7 +26,7 @@ o
 		}
 		VarArray %References
 		{
-			s{"RebeccaPurple.color"}
+			s{"DarkGreen.color"}
 			s{"{ 4dc82890-39e3-4bfc-a97d-86a984d4d3db }"}
 		}
 	}
@@ -144,7 +144,7 @@ o
 	p
 	{
 		s %BLEND_MODE{"BLEND_MODE::BLEND_MODE_OPAQUE"}
-		s %BaseTexture{"RebeccaPurple.color"}
+		s %BaseTexture{"DarkGreen.color"}
 		f %EmissiveMultiplier{0x0000C842}
 		f %MaskThreshold{0}
 		s %NormalTexture{"{ 4dc82890-39e3-4bfc-a97d-86a984d4d3db }"}

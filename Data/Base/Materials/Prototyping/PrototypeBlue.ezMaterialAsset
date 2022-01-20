@@ -14,7 +14,7 @@ o
 			s{"{ c814fe78-9702-2f7d-71b0-c28cc6b8f57c }"}
 		}
 		Uuid %DocumentID{u4{16668297155117188942,18156468896546969089}}
-		u4 %Hash{15875714086344847773}
+		u4 %Hash{8137841753346712681}
 		VarArray %MetaInfo{}
 		VarArray %Outputs{}
 		VarArray %References
@@ -33,8 +33,8 @@ o
 	u3 %v{2}
 	p
 	{
-		s %BLEND_MODE{"BLEND_MODE::BLEND_MODE_OPAQUE"}
-		Color %BaseColor{f{0x29DD7A3D,0xE095643E,0xB6AEE93E,0x0000803F}}
+		s %BLEND_MODE{"BLEND_MODE::BLEND_MODE_TRANSPARENT"}
+		Color %BaseColor{f{0x29DD7A3D,0xE095643E,0xB6AEE93E,0xCAC8483E}}
 		s %BaseTexture{"{ f962fc28-661b-485c-a527-c997e239a3f0 }"}
 		Color %EmissiveColor{f{0,0,0,0x0000803F}}
 		s %EmissiveTexture{""}
