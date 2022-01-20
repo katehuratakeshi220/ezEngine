@@ -691,8 +691,13 @@ void ezPhysXWorldModule::FreeUserDataAfterSimulationStep()
   m_FreeUserDataAfterSimulationStep.Clear();
 }
 
+ezCVarBool cvar_PhysicsPause("Physics.Pause", false, ezCVarFlags::None, "Pauses the physics simulation");
+
 void ezPhysXWorldModule::StartSimulation(const ezWorldModule::UpdateContext& context)
 {
+  if (cvar_PhysicsPause)
+    return;
+
   ezPxDynamicActorComponentManager* pDynamicActorManager = GetWorld()->GetComponentManager<ezPxDynamicActorComponentManager>();
   ezPxTriggerComponentManager* pTriggerManager = GetWorld()->GetComponentManager<ezPxTriggerComponentManager>();
   ezPxQueryShapeActorComponentManager* pQueryShapesManager = GetWorld()->GetComponentManager<ezPxQueryShapeActorComponentManager>();
@@ -742,7 +747,7 @@ void ezPhysXWorldModule::StartSimulation(const ezWorldModule::UpdateContext& con
   m_SimulateTaskGroupId = ezTaskSystem::StartSingleTask(m_pSimulateTask, ezTaskPriority::EarlyThisFrame);
 }
 
-ezCVarFloat cvar_PhysicsDebugDraw("Physics.Debug.Draw", 0.0f, ezCVarFlags::None, "The size of PhysX debug overlays. 0 to disable.");
+ezCVarFloat cvar_PhysicsDebugDraw("Physics.Debug.Draw", 0.2f, ezCVarFlags::None, "The size of PhysX debug overlays. 0 to disable.");
 
 void ezPhysXWorldModule::FetchResults(const ezWorldModule::UpdateContext& context)
 {
